@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: imagecleanup
+  labels:
+    app: imagecleanup
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      name: imagecleanup
+  template:
+    metadata:
+      labels:
+        name: imagecleanup
+    spec:
+      hostNetwork: true
+      containers:        
+        # MDSD
+        - name: cleanup
+          image: {{ .Values.registry }}image-cleanup-worker:{{ .Values.image.tag }}
+          volumeMounts:
+            - name: dockersock
+              mountPath: /var/run/docker.sock
+              readOnly: true
+            - name: containerdsock
+              mountPath: /var/run/containerd/containerd.sock
+              readOnly: true
+      volumes:
+        - name: dockersock
+          hostPath:
+            path: /var/run/docker.sock
+        - name: containerdsock
+          hostPath:
+            path: /var/run/containerd/containerd.sock

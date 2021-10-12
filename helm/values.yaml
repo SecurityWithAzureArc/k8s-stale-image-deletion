@@ -1,0 +1,6 @@
+registry: registry.hub.docker.com/disi33/
+valuesFile: values.yaml
+namespace: test
+image:
+  tag: "latest"
+

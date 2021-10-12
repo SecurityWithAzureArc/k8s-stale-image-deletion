@@ -1,0 +1,28 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: image-cleanup-cronjob
+  namespace: {{ .Values.namespace }}
+spec:
+  # run every hour
+  #schedule: "0 */1 * * *"
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      backoffLimit: 1 # only attempt the job once
+      template:
+        metadata:
+          labels:
+            app: image-cleanup-cronjob
+          annotations:
+            rollme: {{ randAlphaNum 5 | quote }} # this is here so that the pods will be recreated each time.
+        spec:
+          containers:
+          - name: image-cleanup-cronjob
+            image: "{{ .Values.registry }}image-cleanup-job:{{ .Values.image.tag }}"
+            imagePullPolicy: Always
+            env:
+              - name: VALUES_FILE_NAME
+                value: "{{ .Values.valuesFile }}"
+
+          restartPolicy: Never

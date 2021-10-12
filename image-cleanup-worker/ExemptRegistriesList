@@ -1,0 +1,4 @@
+k8s.gcr.io/
+gcr.io/google-containers/
+aksrepos.azurecr.io/mirror/
+mcr.microsoft.com/oss/kubernetes/
