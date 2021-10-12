@@ -42,6 +42,10 @@ $pods | ForEach-Object {
     Write-Host "============================================="
 } 
 
+# wait 5 more minutes for debugging
+# TODO: remove wait
+Start-Sleep 300
+
 # remove image cleanup deployment
 Write-Host "Helm delete image-cleanup-worker -n image-cleanup"
 helm delete image-cleanup-worker -n "image-cleanup"

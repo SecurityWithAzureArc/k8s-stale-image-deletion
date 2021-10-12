@@ -1,29 +1,32 @@
 #!/bin/bash
+function crictld() {
+    crictl -r unix:///var/run/containerd/containerd.sock "$@"
+}
 
-if [ ! -e "/var/run/docker.sock" ]; then
-    echo "Cannot find docker socket(/var/run/docker.sock), please check the command!"
+if [ ! -e "/var/run/containerd/containerd.sock" ]; then
+    echo "Cannot find containerd socket(/var/run/containerd/containerd.sock), please check availability!"
     exit 1
 fi
 
-if docker version >/dev/null; then
-    echo "docker is running properly"
+if crictld version >/dev/null; then
+    echo "crictl is running properly"
 else
-    echo "Cannot run docker binary at /usr/bin/docker"
-    echo "Please check if the docker binary is mounted correctly"
+    echo "Cannot run crictl binary at /usr/local/bin/crictl"
+    echo "Please check if the crictl binary is mounted correctly"
     exit 1
 fi
 
 echo "Start removing unused images"
 
 # Get all image ID
-ALL_LAYER_NUM=$(docker images -a | tail -n +2 | wc -l)
-docker images -q --no-trunc | sort -o ImageIdList
-CONTAINER_ID_LIST=$(docker ps -aq --no-trunc)
+ALL_LAYER_NUM=$(crictld images | tail -n +2 | wc -l)
+crictld images -q --no-trunc | sort -o ImageIdList
+CONTAINER_ID_LIST=$(crictld ps -aq --no-trunc)
 # Get Image ID that is used by a container
 rm -f ContainerImageIdList
 touch ContainerImageIdList
 for CONTAINER_ID in ${CONTAINER_ID_LIST}; do
-    LINE=$(docker inspect ${CONTAINER_ID} | grep "\"Image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
+    LINE=$(crictld inspect ${CONTAINER_ID} | grep "\"Image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
     IMAGE_ID=$(echo ${LINE} | awk -F '"' '{print $4}')
     echo "${IMAGE_ID}" >> ContainerImageIdList
 done
@@ -36,9 +39,9 @@ EXEMPT_REGISTRIES_LIST=$(cat ExemptRegistriesList)
 rm -f ExemptImageIdList
 touch ExemptImageIdList
 for EXEMPT_REGISTRY in ${EXEMPT_REGISTRIES_LIST}; do
-    EXEMPT_CONTAINER_ID_LIST=$(docker ps -a --no-trunc | grep ${EXEMPT_REGISTRY} | awk -F ' ' '{print $1}')
+    EXEMPT_CONTAINER_ID_LIST=$(crictld ps -a --no-trunc | grep ${EXEMPT_REGISTRY} | awk -F ' ' '{print $1}')
     for EXEMPT_CONTAINER_ID in ${EXEMPT_CONTAINER_ID_LIST}; do
-        LINE=$(docker inspect ${EXEMPT_CONTAINER_ID} | grep "\"Image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
+        LINE=$(crictld inspect ${EXEMPT_CONTAINER_ID} | grep "\"image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
         IMAGE_ID=$(echo ${LINE} | awk -F '"' '{print $4}')
         echo "${IMAGE_ID}" >> ExemptImageIdList
     done
@@ -52,8 +55,8 @@ comm -23 ToBeCleaned ExemptImageIdList > ToBeCleanedAndNotExempt
 # Remove Images
 if [ -s ToBeCleanedAndNotExempt ]; then
     echo "Start to clean $(cat ToBeCleanedAndNotExempt | wc -l) images"
-    docker rmi $(cat ToBeCleanedAndNotExempt)
-    (( DIFF_IMG=$(cat ImageIdList | wc -l) - $(docker images | tail -n +2 | wc -l) ))
+    crictld rmi $(cat ToBeCleanedAndNotExempt)
+    (( DIFF_IMG=$(cat ImageIdList | wc -l) - $(crictld images | tail -n +2 | wc -l) ))
     if [ ! ${DIFF_IMG} -gt 0 ]; then
             DIFF_IMG=0
     fi

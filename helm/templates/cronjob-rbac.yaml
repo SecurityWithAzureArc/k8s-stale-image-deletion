@@ -3,7 +3,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: cronjob-daemonset-access-role
-  namespace: {{ .Values.namespace }}
+  namespace: image-cleanup
 rules:
 - apiGroups:
   - "apps"
@@ -28,7 +28,22 @@ kind: RoleBinding
 metadata:
   creationTimestamp: null
   name: cronjob-daemonset-access-rolebinding
-  namespace: {{ .Values.namespace }}
+  namespace: image-cleanup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cronjob-daemonset-access-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: image-cleanup
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: cronjob-daemonset-access-rolebinding2
+  namespace: image-cleanup
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
