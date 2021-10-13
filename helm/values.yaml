@@ -1,7 +1,9 @@
-valuesFile: values.yaml
-
-#the namespace to deploy the job to
+# the namespace to deploy the job to
 namespace: azure-cleanup
+
+# the cron job schedule definition the cleanup is running by
+# currently: every full hour
+jobSchedule: "0 */1 * * *"
 
 # the job image details
 image:
@@ -16,9 +18,15 @@ worker:
     # the worker image name (defaults to 'image-cleanup-worker')
     name: image-cleanup-worker
     # the worker image tag (defaults to the latest available version number as of this release - NOT latest)
-    tag: latest
+    # tag: latest
   # the time to wait before starting cleanup to allow ongoing image pulls to finish in seconds (max. 120s - defaults to 120s)
   waittime: 15
   # the namespace to run the image in (defaults to 'image-cleanup')
   namespace: azure-cleanup
+  # list of exempt registries, if omitted defaults to a list of default k8s and AKS infrastructure image registries
+  # an "exempted registry" means no image that originated from those registries won't ever be deleted
+  # exemptRegistries:
+  #   - AAA
+  #   - BBB
+  #   - CCC
 

@@ -25,12 +25,22 @@ spec:
             - name: containerdsock
               mountPath: /var/run/containerd/containerd.sock
               readOnly: true
-          {{- if .Values.waittime }}
+            {{ if .Values.exemptRegistries }}
+            - name: exemptregistries
+              mountPath: /job/OverriddenExemptRegistries
+              subPath: exemptregistries.yaml
+            {{ end }}
+          {{ if .Values.waittime }}
           env:
           - name: "CLEAN_WAIT"
             value: {{ .Values.waittime | quote }}
-          {{- end }}
+          {{ end }}
       volumes:
         - name: containerdsock
           hostPath:
             path: /var/run/containerd/containerd.sock
+        {{ if .Values.exemptRegistries }}
+        - name: exemptregistries
+          configMap:
+            name: exempt-registries-config
+        {{ end }}

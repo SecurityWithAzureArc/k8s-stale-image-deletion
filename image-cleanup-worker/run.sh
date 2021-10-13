@@ -29,7 +29,7 @@ if [ ${CLEAN_WAIT} -gt 120 ]; then
 fi
 
 # Get all image IDs from the node
-ALL_LAYER_NUM=$(crictld images | tail -n +2 | wc -l)
+ALL_LAYER_NUM=$(exit | tail -n +2 | wc -l)
 crictld images -q --no-trunc | sort -o ImageIdList
 
 # Wait for some time to avoid race-conditions while pulling images
@@ -49,7 +49,13 @@ sort RunningContainerImageIdList -o RunningContainerImageIdList
 
 # We want to exempt k8s infra images, some of these are non-deletable and might cause failures
 # Get exempt image registries
-EXEMPT_REGISTRIES_LIST=$(cat ExemptRegistriesList)
+
+if test -f "./OverriddenExemptRegistries"; then
+    echo "using exempt registries override" 
+    EXEMPT_REGISTRIES_LIST=$(cat OverriddenExemptRegistries | yq eval -P -o p | sed 's/0 = //g' | sed 's/ /\n/g')
+else
+    EXEMPT_REGISTRIES_LIST=$(cat ExemptRegistriesList)
+fi
 # Test all images for exemption status
 rm -f ExemptImageIdList
 touch ExemptImageIdList

@@ -11,3 +11,15 @@ data:
       {{ if .Values.worker.image.tag }}tag: {{ .Values.worker.image.tag }}{{ end }}
     {{ if .Values.worker.waittime }}waittime: {{ .Values.worker.waittime }}{{ end }}
     namespace: {{ if .Values.worker.namespace }}{{ .Values.worker.namespace }}{{ else }}image-cleanup{{ end }}
+    {{ if .Values.worker.exemptRegistries }}exemptRegistries: "true"{{ end }}
+{{ if .Values.worker.exemptRegistries }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exempt-registries-config
+  namespace: "{{ .Values.worker.namespace }}"
+data: 
+  exemptregistries.yaml: |
+    {{ .Values.worker.exemptRegistries }}
+{{ end }}
