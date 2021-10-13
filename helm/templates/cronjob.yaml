@@ -19,10 +19,17 @@ spec:
         spec:
           containers:
           - name: image-cleanup-cronjob
-            image: "{{ .Values.registry }}image-cleanup-job:{{ .Values.image.tag }}"
+            image: "{{ .Values.image.registry }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
             imagePullPolicy: Always
+            volumeMounts:
+            - name: worker-values-config
+              mountPath: /job/chart/values.yaml
+              subPath: values.yaml
             env:
-              - name: VALUES_FILE_NAME
-                value: "{{ .Values.valuesFile }}"
-
+            - name: WORKER_NS
+              value: {{ .Values.worker.namespace | quote }}
           restartPolicy: Never
+          volumes:
+            - name: worker-values-config
+              configMap:
+                name: worker-values-config

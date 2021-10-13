@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: imagecleanup
+  namespace: {{ .Values.namespace }}
   labels:
     app: imagecleanup
 spec:
@@ -19,18 +20,17 @@ spec:
       containers:        
         # MDSD
         - name: cleanup
-          image: {{ .Values.registry }}image-cleanup-worker:{{ .Files.Get "version" }}
+          image: {{ .Values.image.registry }}/{{ .Values.image.name }}:{{ if .Values.image.tag }}{{ .Values.image.tag }}{{ else }}{{ .Files.Get "version" }}{{ end }}
           volumeMounts:
-            - name: dockersock
-              mountPath: /var/run/docker.sock
-              readOnly: true
             - name: containerdsock
               mountPath: /var/run/containerd/containerd.sock
               readOnly: true
+          {{- if .Values.waittime }}
+          env:
+          - name: "CLEAN_WAIT"
+            value: {{ .Values.waittime | quote }}
+          {{- end }}
       volumes:
-        - name: dockersock
-          hostPath:
-            path: /var/run/docker.sock
         - name: containerdsock
           hostPath:
             path: /var/run/containerd/containerd.sock

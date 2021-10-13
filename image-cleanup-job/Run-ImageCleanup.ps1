@@ -1,8 +1,13 @@
 Write-Host "Start image cleanup"
 
+if("$Env:WORKER_NS" -eq "")
+{
+    $Env:WORKER_NS="image-cleanup"
+}
+
 # deploy the image cleanup pods
-Write-Host "Helm install image-cleanup-worker -n image-cleanup -f /job/chart/image-cleanup-worker/$env:VALUES_FILE_NAME /job/chart/image-cleanup-worker"
-helm install image-cleanup-worker -n "image-cleanup" -f "/job/chart/image-cleanup-worker/$env:VALUES_FILE_NAME" "/job/chart/image-cleanup-worker"
+Write-Host "Helm install image-cleanup-worker -f /job/chart/image-cleanup-worker/values.yaml -f /job/chart/values.yaml /job/chart/image-cleanup-worker"
+helm install image-cleanup-worker -f "/job/chart/image-cleanup-worker/values.yaml" -f "/job/chart/values.yaml" "/job/chart/image-cleanup-worker"
 
 # check if deployment was successful
 if (!$?)
@@ -13,6 +18,20 @@ if (!$?)
 
 # give deployment time to finish - 90 seconds
 Write-Host "Start waiting for deployment completion"
+Write-Host "300 seconds left"
+Start-Sleep 30
+Write-Host "270 seconds left"
+Start-Sleep 30
+Write-Host "240 seconds left"
+Start-Sleep 30
+Write-Host "210 seconds left"
+Start-Sleep 30
+Write-Host "180 seconds left"
+Start-Sleep 30
+Write-Host "150 seconds left"
+Start-Sleep 30
+Write-Host "120 seconds left"
+Start-Sleep 30
 Write-Host "90 seconds left"
 Start-Sleep 30
 Write-Host "60 seconds left"
@@ -21,7 +40,7 @@ Write-Host "30 seconds left"
 Start-Sleep 30
 
 # write out logs
-$pods = (& kubectl get pods -n image-cleanup -l name=imagecleanup -o json | ConvertFrom-Json).items
+$pods = (& kubectl get pods -n $Env:WORKER_NS -l name=imagecleanup -o json | ConvertFrom-Json).items
 
 Write-Host "image cleanup results:"
 Write-Host ""
@@ -42,13 +61,9 @@ $pods | ForEach-Object {
     Write-Host "============================================="
 } 
 
-# wait 5 more minutes for debugging
-# TODO: remove wait
-Start-Sleep 300
-
 # remove image cleanup deployment
-Write-Host "Helm delete image-cleanup-worker -n image-cleanup"
-helm delete image-cleanup-worker -n "image-cleanup"
+Write-Host "Helm delete image-cleanup-worker -n $Env:WORKER_NS"
+helm delete image-cleanup-worker -n "$Env:WORKER_NS"
 
 # check if deletion was successful
 if (!$?)

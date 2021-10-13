@@ -5,8 +5,6 @@
 
 echo "Executing image cleanup job"
 
-sleep 6000
-
 bash ./run.sh 2> /tmp/error.out
 
 echo ""

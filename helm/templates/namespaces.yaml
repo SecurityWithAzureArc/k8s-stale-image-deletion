@@ -2,8 +2,10 @@ kind: Namespace
 apiVersion: v1
 metadata:
   name: {{ .Values.namespace }}
+{{ if ne .Values.worker.namespace .Values.namespace }}
 ---
 kind: Namespace
 apiVersion: v1
 metadata:
-  name: image-cleanup
+  name: {{ .Values.worker.namespace }}
+{{ end }}

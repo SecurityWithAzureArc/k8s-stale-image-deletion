@@ -18,41 +18,62 @@ fi
 
 echo "Start removing unused images"
 
-# Get all image ID
+# Define wait period before cleaning
+if [ "${CLEAN_WAIT}" == "" ]; then
+    echo "CLEAN_WAIT not defined, using the default value."
+    CLEAN_WAIT=120
+fi
+if [ ${CLEAN_WAIT} -gt 120 ]; then
+    echo "CLEAN_WAIT value is too big. Max. allowed setting is 120 seconds (2 min)!"
+    CLEAN_WAIT=120
+fi
+
+# Get all image IDs from the node
 ALL_LAYER_NUM=$(crictld images | tail -n +2 | wc -l)
 crictld images -q --no-trunc | sort -o ImageIdList
-CONTAINER_ID_LIST=$(crictld ps -aq --no-trunc)
-# Get Image ID that is used by a container
-rm -f ContainerImageIdList
-touch ContainerImageIdList
-for CONTAINER_ID in ${CONTAINER_ID_LIST}; do
-    LINE=$(crictld inspect ${CONTAINER_ID} | grep "\"Image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
-    IMAGE_ID=$(echo ${LINE} | awk -F '"' '{print $4}')
-    echo "${IMAGE_ID}" >> ContainerImageIdList
-done
-sort ContainerImageIdList -o ContainerImageIdList
 
-# we need to exempt k8s infra images, some of these are non-deletable and will cause failures
-# Get exempt images
+# Wait for some time to avoid race-conditions while pulling images
+echo "Waiting for CLEAN_WAIT: ${CLEAN_WAIT}"
+sleep ${CLEAN_WAIT} & wait
+
+CONTAINER_ID_LIST=$(crictld ps -q --no-trunc)
+# Get Image IDs from all running containers
+rm -f RunningContainerImageIdList
+touch RunningContainerImageIdList
+for CONTAINER_ID in ${CONTAINER_ID_LIST}; do
+    LINE=$(crictld inspect ${CONTAINER_ID} | grep "\"image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
+    IMAGE_ID=$(echo ${LINE} | awk -F '"' '{print $4}')
+    echo "${IMAGE_ID}" >> RunningContainerImageIdList
+done
+sort RunningContainerImageIdList -o RunningContainerImageIdList
+
+# We want to exempt k8s infra images, some of these are non-deletable and might cause failures
+# Get exempt image registries
 EXEMPT_REGISTRIES_LIST=$(cat ExemptRegistriesList)
-# Get Image ID that originates from an exempt registry
+# Test all images for exemption status
 rm -f ExemptImageIdList
 touch ExemptImageIdList
-for EXEMPT_REGISTRY in ${EXEMPT_REGISTRIES_LIST}; do
-    EXEMPT_CONTAINER_ID_LIST=$(crictld ps -a --no-trunc | grep ${EXEMPT_REGISTRY} | awk -F ' ' '{print $1}')
-    for EXEMPT_CONTAINER_ID in ${EXEMPT_CONTAINER_ID_LIST}; do
-        LINE=$(crictld inspect ${EXEMPT_CONTAINER_ID} | grep "\"image\": \"\(sha256:\)\?[0-9a-fA-F]\{64\}\"")
-        IMAGE_ID=$(echo ${LINE} | awk -F '"' '{print $4}')
-        echo "${IMAGE_ID}" >> ExemptImageIdList
-    done
+ALL_CONTAINER_IMAGE_IDS=$(cat ImageIdList)
+for IMAGE_ID in ${ALL_CONTAINER_IMAGE_IDS}; do
+    CONTAINER_INFO=$(crictld images --digests --no-trunc | grep "${IMAGE_ID}")
+    if [ -n "$CONTAINER_INFO" ]; then
+        IMAGE_NAME=$(echo "$CONTAINER_INFO" | awk '{ print $1 }')
+        for EXEMPT_REGISTRY in ${EXEMPT_REGISTRIES_LIST}; do
+            if [[ "$IMAGE_NAME" == *"$EXEMPT_REGISTRY"* ]]; then
+                echo "${IMAGE_ID}" >> ExemptImageIdList
+            fi
+        done
+    fi
 done
 sort ExemptImageIdList -o ExemptImageIdList
 
-# Remove the images being used by containers from the delete list
-comm -23 ImageIdList ContainerImageIdList > ToBeCleaned
+# Remove the images being used by containers from the list of all images -> all non-running images
+comm -23 ImageIdList RunningContainerImageIdList > ToBeCleaned
+
+# Remove the list of exempted images from all non-running images -> images to be cleaned up
 comm -23 ToBeCleaned ExemptImageIdList > ToBeCleanedAndNotExempt
 
-# Remove Images
+# Clean up images
 if [ -s ToBeCleanedAndNotExempt ]; then
     echo "Start to clean $(cat ToBeCleanedAndNotExempt | wc -l) images"
     crictld rmi $(cat ToBeCleanedAndNotExempt)

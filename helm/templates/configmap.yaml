@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-values-config
+  namespace: "{{ .Values.namespace }}"
+data: 
+  values.yaml: |
+    image:
+      registry: {{ .Values.worker.image.registry }}
+      {{ if .Values.worker.image.name }}name: {{ .Values.worker.image.name }}{{ end }}
+      {{ if .Values.worker.image.tag }}tag: {{ .Values.worker.image.tag }}{{ end }}
+    {{ if .Values.worker.waittime }}waittime: {{ .Values.worker.waittime }}{{ end }}
+    namespace: {{ if .Values.worker.namespace }}{{ .Values.worker.namespace }}{{ else }}image-cleanup{{ end }}

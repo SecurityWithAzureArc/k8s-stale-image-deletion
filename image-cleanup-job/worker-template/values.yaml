@@ -1,4 +1,6 @@
-registry: registry.hub.docker.com/disi33/
+image:
+  name: image-cleanup-worker
+namespace: image-cleanup
 
 
 
