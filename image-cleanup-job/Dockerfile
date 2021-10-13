@@ -46,5 +46,7 @@ RUN dos2unix /job/wrapper.sh
 ADD Run-ImageCleanup.ps1 /job/Run-ImageCleanup.ps1
 COPY worker-template/templates/*.yaml /job/chart/image-cleanup-worker/templates/
 COPY worker-template/*.yaml /job/chart/image-cleanup-worker/
+COPY version /job/chart/image-cleanup-worker/version
 
-CMD ["/bin/bash", "/job/wrapper.sh"]
+WORKDIR /job
+CMD ["/bin/bash", "./wrapper.sh"]

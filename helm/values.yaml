@@ -1,6 +1,6 @@
 registry: registry.hub.docker.com/disi33/
 valuesFile: values.yaml
-namespace: test
+namespace: azure-cleanup
 image:
   tag: "latest"
 

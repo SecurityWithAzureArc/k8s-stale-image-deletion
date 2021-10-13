@@ -1,6 +1,4 @@
 registry: registry.hub.docker.com/disi33/
-image:
-  tag: "latest"
 
 
 
